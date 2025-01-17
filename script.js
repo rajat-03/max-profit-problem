@@ -1,84 +1,76 @@
-let data = [
-    {
-      establishment: "theater",
-      symbol: "T",
-      unitTimeEarning: 1500,
-      buildTime: 5
-    },
-    {
-      establishment: "pub",
-      symbol: "P",
-      unitTimeEarning: 1000,
-      buildTime: 4
-    },
-    {
-      establishment: "park",
-      symbol: "C",
-      unitTimeEarning: 3000,
-      buildTime: 10
-    }
-  ];
-  
-  function calculateProfits(data, totalTimeUnits) {
-    const { unitTimeEarning, buildTime, symbol } = data;
-    const noOfPossibleUnits = Math.floor(totalTimeUnits / buildTime);
-  
-    let totalEarningTime = 0;
-    let totalDevelopmentTime = 0;
-  
-    for (let i = 1; i <= noOfPossibleUnits; i++) {
-      let businessRunningTime = totalTimeUnits - (totalDevelopmentTime + buildTime);
-      if (businessRunningTime > 0) {
-        totalEarningTime += businessRunningTime;
-        totalDevelopmentTime += buildTime;
-      }
-    }
-  
-    let totalProfit = totalEarningTime * unitTimeEarning;
-  
-    return { totalProfit, noOfPossibleUnits, establishment: symbol };
+class Infrastructure {
+  constructor() {
+    this.earnings = 0;
+    this.infra = [];
   }
-  
-  function getResultString({ establishment, noOfPossibleUnits, totalProfit }) {
-    return `T: ${establishment === "T" ? noOfPossibleUnits : "0"}, P: ${
-      establishment === "P" ? noOfPossibleUnits : "0"
-    }, C: ${establishment === "C" ? noOfPossibleUnits : "0"}, Earning: $${totalProfit}`;
+}
+
+const timeUnits = [5, 4, 10];
+const earnings = [1500, 1000, 3000];
+let targetTime;
+
+function util(time, money, res, arr) {
+  if (money === res.earnings) {
+    const arrClone = [...arr];
+    res.infra.push(arrClone);
   }
-  
-  let form = document.getElementById("myform");
-  
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    let totalTimeUnits = parseInt(document.forms["myForm"]["time"].value);
-  
-    const possibleEstablishments = data.filter(val => totalTimeUnits > val.buildTime);
-  
-    const solutions = possibleEstablishments
-      .map(val => {
-        let { totalProfit, ...res } = calculateProfits(val, totalTimeUnits);
-        return totalProfit >= 0 ? { totalProfit, ...res } : false;
-      })
-      .reduce((prev, curr) => {
-        if (curr === false) return prev;
-  
-        if (!prev.length) return [curr];
-  
-        if (prev[0].totalProfit === curr.totalProfit) return [...prev, curr];
-  
-        if (prev[0].totalProfit < curr.totalProfit) return [curr];
-  
-        return prev;
-      }, []);
-  
-    document.getElementById("results").innerHTML = solutions.length
-      ? solutions
-          .map(
-            (val, index) =>
-              `<div>
-        <b>${index + 1}.)</b> ${getResultString(val)}
-      </div>`
-          )
-          .join("")
-      : "No Solutions";
-  });
-  
+
+  if (money > res.earnings) {
+    res.earnings = money;
+    res.infra = [];
+    const arrClone = [...arr];
+    res.infra.push(arrClone);
+  }
+
+  for (let i = 0; i < 3; i++) {
+    if (timeUnits[i] < time) {
+      arr[i] += 1;
+      util(
+        time - timeUnits[i],
+        money + (time - timeUnits[i]) * earnings[i],
+        res,
+        arr
+      );
+      arr[i] -= 1;
+    }
+  }
+}
+
+function getResultString(infra, totalProfit) {
+  return `T: ${infra[0]}, P: ${infra[1]}, C: ${infra[2]}, Earning: $${totalProfit}`;
+}
+
+const main = (totalTimeUnits) => {
+  const res = new Infrastructure();
+
+  util(totalTimeUnits, 0, res, [0, 0, 0]);
+
+  const resultsContainer = document.getElementById("results");
+  resultsContainer.innerHTML = "";
+
+  if (res.infra.length === 0) {
+    resultsContainer.innerHTML = "No Solutions";
+  } else {
+    resultsContainer.innerHTML = res.infra
+      .map(
+        (infra, index) =>
+          `<div><b>${index + 1}.)</b> ${getResultString(
+            infra,
+            res.earnings
+          )}</div>`
+      )
+      .join("");
+  }
+};
+
+document.getElementById("myform").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const timeInput = parseInt(document.forms["myForm"]["time"].value, 10);
+
+  if (!isNaN(timeInput) && timeInput > 0 && timeInput <= 200) {
+    main(timeInput);
+  } else {
+    document.getElementById("results").innerHTML =
+      "<div>Please enter a valid positive number between 1 and 200.</div>";
+  }
+});
